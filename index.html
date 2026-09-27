@@ -4117,7 +4117,7 @@
               <div id="smiles-polaroid-frame" class="polaroid-frame" role="button" tabindex="0" aria-label="Tap to zoom video">
                 <span class="polaroid-zoom-pill">Tap to zoom 🌸</span>
                 <div class="polaroid-fallback-art" id="smiles-fallback"></div>
-                <video id="smiles-video" class="polaroid-img" playsinline preload="auto" controls style="display:none;"></video>
+                <video id="smiles-video" class="polaroid-img" playsinline preload="auto" loop controls style="display:none;"></video>
               </div>
               <p id="smiles-caption" class="polaroid-caption" style="font-size:1.2rem;min-height:2em;"></p>
               <span id="smiles-counter" class="polaroid-number"></span>
@@ -4243,7 +4243,7 @@
                 <div id="photo10-frame" class="polaroid-frame" role="button" tabindex="0" aria-label="Tap to zoom video 10" style="margin-bottom:0.65rem;">
                   <span class="polaroid-zoom-pill">Tap to zoom 💗</span>
                   <div class="polaroid-fallback-art" id="photo10-fallback"></div>
-                  <video id="photo10-video" class="polaroid-img" playsinline preload="auto" controls style="display:none;"></video>
+                  <video id="photo10-video" class="polaroid-img" playsinline preload="auto" loop controls style="display:none;"></video>
                 </div>
                 <p id="photo10-caption" class="polaroid-caption" style="font-size:1.15rem;min-height:auto;padding:0 0.5rem;"></p>
               </div>
@@ -4611,9 +4611,9 @@ And last me hatttttt pgllllllll🤪💖🧿..
         "Seriously... kitni cute ho? 🥹🧸✨",
         "Effortlessly the prettiest girl ever 🌸",
         "Ye wali look toh alag hi level pe cute hai 🥹",
-        "Ek ye aapki soone ki addat.. najar na lage.. Waise dono sath me payree lag rahe ho..💗",
+        "Ek ye aapki soone ki addat.. najar na lage.. Waise dono sath me kitne payree lag rahe ho najar na lagee..💗🧿",
         "Pure sunshine in a single frame 🌷✨",
-        "Ek aur favorite (sabse favorite sayad) video aapki — just look at that grace 😭🎀🧿",
+        "Ye meri Sabse favorite video hai sayad , sayad isliye kyuki meri saari hi favorite hai🙈🧿 — just look at that grace and cuteness😭🎀🧿",
         "Inhi ankho se darate hona madam ji.. but Sabse pyari, sabse special ho aap — simply YOU. 🌸❤️"
       ],
 
@@ -4732,15 +4732,20 @@ And last me hatttttt pgllllllll🤪💖🧿..
      * ============================================================================ */
     const VideoAudioDetector = (() => {
       // Cache URL / file -> boolean (true = has audio track, false = silent)
-      const audioCache = new Map();
+      const audioCache = new Map([
+        ['video07.mp4', true],
+        ['video08.mp4', false],
+        ['video09.mp4', true],
+        ['video10.mp4', false]
+      ]);
 
       function getCleanKey(src) {
         if (!src) return '';
         try {
           const u = new URL(src, window.location.href);
-          return u.pathname.split('/').pop() || src;
+          return decodeURIComponent(u.pathname.split('/').pop() || src);
         } catch (e) {
-          return src.split('#')[0].split('?')[0].split('/').pop() || src;
+          return decodeURIComponent(src.split('#')[0].split('?')[0].split('/').pop() || src);
         }
       }
 
@@ -4835,7 +4840,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
       // Synchronous check (checks cache, then native video properties)
       function hasAudioSync(videoEl) {
         if (!videoEl) return false;
-        const key = getCleanKey(videoEl.currentSrc || videoEl.src);
+        const key = getCleanKey(videoEl.src || videoEl.currentSrc);
         if (key && audioCache.has(key)) {
           return audioCache.get(key);
         }
@@ -4850,7 +4855,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
       // Proactively inspect a video element and cache result
       async function inspectVideo(videoEl) {
         if (!videoEl) return false;
-        const url = videoEl.currentSrc || videoEl.src;
+        const url = videoEl.src || videoEl.currentSrc;
         const key = getCleanKey(url);
         if (key && audioCache.has(key)) {
           return audioCache.get(key);
@@ -4890,6 +4895,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
       let userManuallyPaused = false;
       let pausedForVideo = false;
       let musicWasPlaying = false;
+      let pausedForPageHidden = false;
       let waitingForInteraction = false;
       let unlockListenersAttached = false;
       let isInitialized = false;
@@ -4910,10 +4916,11 @@ And last me hatttttt pgllllllll🤪💖🧿..
 
       function attemptPlay() {
         const aud = getMusicEl();
-        if (!aud || userManuallyPaused || pausedForVideo) return;
+        if (!aud || userManuallyPaused || pausedForVideo || document.visibilityState === 'hidden') return;
         const playPromise = aud.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
+            musicWasPlaying = true;
             updateUI(true);
             removeInteractionListeners();
           }).catch(() => {
@@ -4926,7 +4933,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
       }
 
       function handleFirstInteraction() {
-        if (!waitingForInteraction || userManuallyPaused || pausedForVideo) {
+        if (!waitingForInteraction || userManuallyPaused || pausedForVideo || document.visibilityState === 'hidden') {
           removeInteractionListeners();
           return;
         }
@@ -4935,6 +4942,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
           const playPromise = aud.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
+              musicWasPlaying = true;
               waitingForInteraction = false;
               updateUI(true);
               removeInteractionListeners();
@@ -4969,6 +4977,8 @@ And last me hatttttt pgllllllll🤪💖🧿..
         if (!aud) return;
         userManuallyPaused = false;
         pausedForVideo = false;
+        pausedForPageHidden = false;
+        musicWasPlaying = true;
         attemptPlay();
       }
 
@@ -4978,6 +4988,8 @@ And last me hatttttt pgllllllll🤪💖🧿..
         if (aud.paused) {
           userManuallyPaused = false;
           pausedForVideo = false;
+          pausedForPageHidden = false;
+          musicWasPlaying = true;
           aud.play().then(() => {
             updateUI(true);
             removeInteractionListeners();
@@ -4989,6 +5001,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
           userManuallyPaused = true;
           pausedForVideo = false;
           musicWasPlaying = false;
+          pausedForPageHidden = false;
           aud.pause();
           updateUI(false);
           removeInteractionListeners();
@@ -5015,6 +5028,8 @@ And last me hatttttt pgllllllll🤪💖🧿..
               aud.pause();
             } else if (userManuallyPaused) {
               musicWasPlaying = false;
+            } else if (musicWasPlaying) {
+              pausedForVideo = true;
             }
           }
         };
@@ -5022,16 +5037,20 @@ And last me hatttttt pgllllllll🤪💖🧿..
         const audioStatus = VideoAudioDetector.hasAudioSync(videoEl);
 
         if (audioStatus === true) {
-          // Rule 1: Video HAS an audio track -> Pause birthday.mp3
+          // Rule 1: Video HAS an audio track -> Pause birthday.mp3 immediately
           pauseMusicForAudioVideo();
         } else if (audioStatus === false) {
-          // Rule 2: Video DOES NOT HAVE an audio track -> Keep birthday.mp3 playing continuously!
+          // Rule 2: Video DOES NOT HAVE an audio track / is silent ->
+          // Immediately resume birthday.mp3 if it was paused for an audible video!
+          resumeMusicIfPausedForVideo();
           return;
         } else {
           // Indeterminate: Do NOT pause music prematurely. Handle limited browsers gracefully.
           VideoAudioDetector.inspectVideo(videoEl).then(hasAudio => {
             if (hasAudio === true && !videoEl.paused) {
               pauseMusicForAudioVideo();
+            } else if (hasAudio === false) {
+              resumeMusicIfPausedForVideo();
             }
           });
 
@@ -5045,7 +5064,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
             }
             if (typeof videoEl.webkitAudioDecodedByteCount === 'number' && videoEl.webkitAudioDecodedByteCount > 0) {
               clearInterval(pollAudio);
-              const key = VideoAudioDetector.getCleanKey(videoEl.currentSrc || videoEl.src);
+              const key = VideoAudioDetector.getCleanKey(videoEl.src || videoEl.currentSrc);
               if (key) VideoAudioDetector.audioCache.set(key, true);
               pauseMusicForAudioVideo();
             }
@@ -5053,7 +5072,10 @@ And last me hatttttt pgllllllll🤪💖🧿..
         }
       }
 
-      function onVideoPauseOrEnd(videoEl) {
+      function resumeMusicIfPausedForVideo() {
+        // If the page is hidden, never resume audio in the background
+        if (document.visibilityState === 'hidden') return;
+
         // Check if any other video WITH an audio track is still actively playing
         const anyAudioPlaying = Array.from(document.querySelectorAll('video')).some(v => {
           return !v.paused && !v.ended && VideoAudioDetector.hasAudioSync(v) === true;
@@ -5061,8 +5083,61 @@ And last me hatttttt pgllllllll🤪💖🧿..
 
         if (!anyAudioPlaying) {
           const aud = getMusicEl();
-          if (pausedForVideo && musicWasPlaying && !userManuallyPaused && aud) {
+          if (aud && aud.paused && !userManuallyPaused && (pausedForVideo || musicWasPlaying)) {
             pausedForVideo = false;
+            const p = aud.play();
+            if (p !== undefined) {
+              p.then(() => {
+                musicWasPlaying = true;
+                updateUI(true);
+              }).catch(() => {});
+            } else {
+              musicWasPlaying = true;
+              updateUI(true);
+            }
+          }
+        }
+      }
+
+      function onVideoPauseOrEnd(videoEl) {
+        resumeMusicIfPausedForVideo();
+      }
+
+      function handlePageHideOrHidden() {
+        const aud = getMusicEl();
+        if (aud && !aud.paused) {
+          pausedForPageHidden = true;
+          aud.pause();
+          updateUI(false);
+        }
+        // Also pause any playing videos so no media continues in the background
+        document.querySelectorAll('video').forEach(v => {
+          try {
+            if (!v.paused) v.pause();
+          } catch (e) {}
+        });
+      }
+
+      function handlePageVisible() {
+        const aud = getMusicEl();
+        // If an active look video was paused upon leaving, resume it if its section is active
+        if (typeof VideoAutoplayController !== 'undefined') {
+          const v = VideoAutoplayController.getActiveVideo();
+          if (v && v.paused && !v.ended) {
+            const section = v.closest('.story-section');
+            if (section && section.classList.contains('story-active')) {
+              v.play().catch(() => {});
+              return;
+            }
+          }
+        }
+        // Otherwise resume birthday.mp3 if it was playing before leaving
+        if (pausedForPageHidden && !userManuallyPaused && !pausedForVideo && aud) {
+          const anyAudioPlaying = Array.from(document.querySelectorAll('video')).some(v => {
+            return !v.paused && !v.ended && VideoAudioDetector.hasAudioSync(v) === true;
+          });
+          if (!anyAudioPlaying) {
+            pausedForPageHidden = false;
             aud.play().then(() => {
               updateUI(true);
             }).catch(() => {});
@@ -5107,9 +5182,47 @@ And last me hatttttt pgllllllll🤪💖🧿..
 
         document.addEventListener('ended', (e) => {
           if (e.target && e.target.tagName === 'VIDEO') {
-            setTimeout(() => onVideoPauseOrEnd(e.target), 60);
+            const v = e.target;
+            const isLookVideo = (typeof VideoAutoplayController !== 'undefined' && VideoAutoplayController.getActiveVideo() === v);
+            if (isLookVideo) {
+              // Seamless auto-replay for active look video: restart from 0 without user click
+              v.currentTime = 0;
+              const p = v.play();
+              if (p !== undefined) p.catch(() => {});
+              return;
+            }
+            setTimeout(() => onVideoPauseOrEnd(v), 60);
           }
         }, true);
+
+        // Volume / mute change handler for video elements
+        document.addEventListener('volumechange', (e) => {
+          if (e.target && e.target.tagName === 'VIDEO') {
+            const v = e.target;
+            if (!v.paused && !v.muted && v.volume > 0) {
+              onVideoPlay(v);
+            } else if (v.muted || v.volume === 0) {
+              setTimeout(() => onVideoPauseOrEnd(v), 60);
+            }
+          }
+        }, true);
+
+        // Tab / window visibility and page leaving handlers
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            handlePageHideOrHidden();
+          } else if (document.visibilityState === 'visible') {
+            handlePageVisible();
+          }
+        });
+
+        window.addEventListener('pagehide', () => {
+          handlePageHideOrHidden();
+        });
+
+        window.addEventListener('beforeunload', () => {
+          handlePageHideOrHidden();
+        });
       }
 
       return {
@@ -5118,6 +5231,7 @@ And last me hatttttt pgllllllll🤪💖🧿..
         toggle,
         onVideoPlay,
         onVideoPauseOrEnd,
+        resumeMusicIfPausedForVideo,
         get isPlaying() { const aud = getMusicEl(); return aud ? !aud.paused : false; },
         get musicWasPlaying() { return musicWasPlaying; }
       };
@@ -6082,9 +6196,6 @@ And last me hatttttt pgllllllll🤪💖🧿..
         return;
       }
 
-      mediaEl.style.display = 'none';
-      fallbackEl.style.display = 'flex';
-
       if (mediaEl.tagName === 'VIDEO') {
         const onReady = () => {
           mediaEl.style.display = 'block';
@@ -6101,13 +6212,24 @@ And last me hatttttt pgllllllll🤪💖🧿..
           mediaEl.style.display = 'none';
           fallbackEl.style.display = 'flex';
         };
-        mediaEl.src = cleanPath;
-        try { mediaEl.load(); } catch (e) {}
+
+        const isSameSrc = mediaEl.src && (mediaEl.src === cleanPath || mediaEl.src.endsWith('/' + cleanPath));
+        if (!isSameSrc) {
+          mediaEl.src = cleanPath;
+          try { mediaEl.load(); } catch (e) {}
+        }
+
+        mediaEl.loop = true;
+        mediaEl.style.display = 'block';
+        fallbackEl.style.display = 'none';
+
         if (mediaEl.readyState >= 1 && mediaEl.videoWidth > 0) {
           onReady();
         }
         VideoAudioDetector.probeUrlBinary(cleanPath);
       } else {
+        mediaEl.style.display = 'none';
+        fallbackEl.style.display = 'flex';
         const onReady = () => {
           mediaEl.style.display = 'block';
           fallbackEl.style.display = 'none';
@@ -6163,6 +6285,150 @@ And last me hatttttt pgllllllll🤪💖🧿..
       num.textContent = badgeLabel;
       modal.classList.add('open');
     }
+
+    /* ============================================================================
+     * VIDEO AUTOPLAY CONTROLLER (LOOK / SLIDES 7, 8, 9, 10)
+     * Browser-safe, unmuted-first with muted fallback, audio priority coordination
+     * ============================================================================ */
+    const VideoAutoplayController = (() => {
+      let activeVideoEl = null;
+
+      function stopAllVideos() {
+        document.querySelectorAll('video').forEach(v => {
+          try {
+            if (!v.paused) v.pause();
+            v.currentTime = 0;
+          } catch (e) {}
+        });
+        activeVideoEl = null;
+        if (typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+          MusicManager.resumeMusicIfPausedForVideo();
+        }
+      }
+
+      function stopVideo(videoEl) {
+        if (!videoEl) return;
+        try {
+          if (!videoEl.paused) videoEl.pause();
+          videoEl.currentTime = 0;
+        } catch (e) {}
+        if (activeVideoEl === videoEl) {
+          activeVideoEl = null;
+        }
+        if (typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+          MusicManager.resumeMusicIfPausedForVideo();
+        }
+      }
+
+      function playLookVideo(videoEl) {
+        if (!videoEl) return;
+
+        // If this exact video is already active and playing unmuted with sound, do not restart
+        if (activeVideoEl === videoEl && !videoEl.paused && !videoEl.muted) {
+          return;
+        }
+
+        // 1. Pause & reset any other video so ONLY the active video plays
+        document.querySelectorAll('video').forEach(v => {
+          if (v !== videoEl) {
+            try {
+              if (!v.paused) v.pause();
+              v.currentTime = 0;
+            } catch (e) {}
+          }
+        });
+
+        activeVideoEl = videoEl;
+
+        // 2. Start from beginning
+        try {
+          videoEl.currentTime = 0;
+        } catch (e) {}
+
+        // 3. Audio track detection
+        const hasAudio = VideoAudioDetector.hasAudioSync(videoEl);
+
+        // 4. Audio priority coordination:
+        if (hasAudio === true) {
+          // Video HAS audio track -> pause birthday.mp3 immediately
+          if (typeof MusicManager !== 'undefined') {
+            MusicManager.onVideoPlay(videoEl);
+          }
+        } else if (hasAudio === false) {
+          // Video has NO audio track / is silent -> immediately resume birthday.mp3 if it was paused!
+          if (typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+            MusicManager.resumeMusicIfPausedForVideo();
+          }
+        }
+
+        // 5. Attempt playback WITH SOUND (do NOT start it muted!) and enable auto-replay
+        videoEl.loop = true;
+        videoEl.muted = false;
+        videoEl.volume = 1;
+
+        try {
+          const playPromise = videoEl.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              // Successfully playing!
+              if (activeVideoEl === videoEl) {
+                if (hasAudio === true && typeof MusicManager !== 'undefined') {
+                  MusicManager.onVideoPlay(videoEl);
+                } else if (hasAudio === false && typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+                  MusicManager.resumeMusicIfPausedForVideo();
+                }
+              }
+            }).catch(() => {
+              // Browser policy strictly blocked audible autoplay:
+              // Fallback to muted so the video still plays, but do NOT permanently leave it muted
+              if (activeVideoEl === videoEl) {
+                videoEl.muted = true;
+                videoEl.play().catch(() => {});
+
+                if (hasAudio === true) {
+                  // Resume birthday song while video is muted by browser policy
+                  if (typeof MusicManager !== 'undefined') {
+                    MusicManager.onVideoPauseOrEnd(videoEl);
+                  }
+                  // Allow user interaction to seamlessly unmute
+                  const unmuteOnUserAction = () => {
+                    if (activeVideoEl === videoEl && !videoEl.paused) {
+                      videoEl.muted = false;
+                      videoEl.volume = 1;
+                      if (typeof MusicManager !== 'undefined') {
+                        MusicManager.onVideoPlay(videoEl);
+                      }
+                    }
+                  };
+                  window.addEventListener('pointerdown', unmuteOnUserAction, { once: true, capture: true });
+                  window.addEventListener('touchstart', unmuteOnUserAction, { once: true, capture: true });
+                  window.addEventListener('click', unmuteOnUserAction, { once: true, capture: true });
+                } else if (hasAudio === false) {
+                  if (typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+                    MusicManager.resumeMusicIfPausedForVideo();
+                  }
+                }
+              }
+            });
+          }
+        } catch (e) {
+          if (activeVideoEl === videoEl) {
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+            if (hasAudio === false && typeof MusicManager !== 'undefined' && MusicManager.resumeMusicIfPausedForVideo) {
+              MusicManager.resumeMusicIfPausedForVideo();
+            }
+          }
+        }
+      }
+
+      return {
+        playLookVideo,
+        stopVideo,
+        stopAllVideos,
+        getActiveVideo: () => activeVideoEl
+      };
+    })();
 
     /* ============================================================================
      * INITIALIZE ALL SECTIONS & SMART 11-PHOTO DISTRIBUTION
@@ -6410,7 +6676,10 @@ And last me hatttttt pgllllllll🤪💖🧿..
         const cap = captions[pIdx] || 'Dekhte hi smile aa jaaye 🥹💗';
 
         if (smilesVideo) {
-          try { smilesVideo.pause(); } catch (e) {}
+          try {
+            smilesVideo.pause();
+            smilesVideo.currentTime = 0;
+          } catch (e) {}
         }
 
         bindPhotoSlot(smilesVideo, smilesFallback, path, cap, pIdx);
@@ -6420,6 +6689,14 @@ And last me hatttttt pgllllllll🤪💖🧿..
         smilesTabs.querySelectorAll('.smile-tab-btn').forEach((b, i) => {
           b.classList.toggle('active', i === tabPos);
         });
+
+        // Autoplay the video if section-more-reasons is the active visible section
+        const moreReasonsEl = document.getElementById('section-more-reasons');
+        if (moreReasonsEl && moreReasonsEl.classList.contains('story-active')) {
+          if (typeof VideoAutoplayController !== 'undefined' && smilesVideo) {
+            VideoAutoplayController.playLookVideo(smilesVideo);
+          }
+        }
       }
       renderSmileSlide(0);
 
@@ -6766,6 +7043,10 @@ And last me hatttttt pgllllllll🤪💖🧿..
           tapHint.style.display = 'none';
           sheet.classList.add('visible');
           startTypewriter();
+          const p10Video = document.getElementById('photo10-video');
+          if (typeof VideoAutoplayController !== 'undefined' && p10Video) {
+            VideoAutoplayController.playLookVideo(p10Video);
+          }
         }, 820);
       }
 
@@ -6778,6 +7059,10 @@ And last me hatttttt pgllllllll🤪💖🧿..
         subtitlePrompt.textContent = 'Teddy aapke liye ye envelope leke baitha hai — seal pe tap karke kholo!';
         sheet.classList.remove('visible');
         textTarget.textContent = '';
+        const p10Video = document.getElementById('photo10-video');
+        if (typeof VideoAutoplayController !== 'undefined' && p10Video) {
+          VideoAutoplayController.stopVideo(p10Video);
+        }
       }
 
       addInteractiveTap(envelope, openEnvelope);
@@ -6796,6 +7081,10 @@ And last me hatttttt pgllllllll🤪💖🧿..
         const coords = getTapCoords(e, replayBtn);
         GlobalFX.spawnTapHearts(coords.x, coords.y);
         startTypewriter();
+        const p10Video = document.getElementById('photo10-video');
+        if (typeof VideoAutoplayController !== 'undefined' && p10Video) {
+          VideoAutoplayController.playLookVideo(p10Video);
+        }
       });
 
       return { resetLetter };
@@ -7431,6 +7720,17 @@ And last me hatttttt pgllllllll🤪💖🧿..
         setTimeout(() => {
           GlobalFX.spawnBurst(window.innerWidth / 2, window.innerHeight * 0.35, { count: 165, power: 1.05 });
         }, 280);
+      } else if (sectionId === 'section-more-reasons') {
+        const smilesVideo = document.getElementById('smiles-video');
+        if (typeof VideoAutoplayController !== 'undefined' && smilesVideo) {
+          VideoAutoplayController.playLookVideo(smilesVideo);
+        }
+      } else if (sectionId === 'section-letter') {
+        const sheet = document.getElementById('stationery-letter-sheet');
+        const p10Video = document.getElementById('photo10-video');
+        if (typeof VideoAutoplayController !== 'undefined' && p10Video && sheet && sheet.classList.contains('visible')) {
+          VideoAutoplayController.playLookVideo(p10Video);
+        }
       } else if (sectionId === 'section-next-year') {
         setTimeout(() => {
           if (typeof ConstellationController !== 'undefined' && ConstellationController.resetConstellation) {
@@ -7468,6 +7768,9 @@ And last me hatttttt pgllllllll🤪💖🧿..
       if (!nextEl) return;
 
       if (immediate || currentStepIndex === targetIndex || !currentEl) {
+        if (typeof VideoAutoplayController !== 'undefined') {
+          VideoAutoplayController.stopAllVideos();
+        }
         STORY_SECTION_IDS.forEach((id, idx) => {
           const el = document.getElementById(id);
           if (el) {
@@ -7485,6 +7788,18 @@ And last me hatttttt pgllllllll🤪💖🧿..
         updateNavButtons(currentStepIndex);
         updateProgressBar(currentStepIndex);
         triggerSectionHooks(nextId);
+        if (nextId === 'section-more-reasons') {
+          const smilesVideo = document.getElementById('smiles-video');
+          if (typeof VideoAutoplayController !== 'undefined' && smilesVideo) {
+            VideoAutoplayController.playLookVideo(smilesVideo);
+          }
+        } else if (nextId === 'section-letter') {
+          const sheet = document.getElementById('stationery-letter-sheet');
+          const p10Video = document.getElementById('photo10-video');
+          if (typeof VideoAutoplayController !== 'undefined' && p10Video && sheet && sheet.classList.contains('visible')) {
+            VideoAutoplayController.playLookVideo(p10Video);
+          }
+        }
         return;
       }
 
@@ -7493,10 +7808,17 @@ And last me hatttttt pgllllllll🤪💖🧿..
       const outClass = isNext ? 'slide-out-next' : 'slide-out-back';
       const prepClass = isNext ? 'slide-prep-next' : 'slide-prep-back';
 
-      // Pause any playing videos during slide transition
-      document.querySelectorAll('video').forEach(v => {
-        try { v.pause(); } catch(e) {}
-      });
+      // Pause & reset any playing videos to beginning when moving away
+      if (typeof VideoAutoplayController !== 'undefined') {
+        VideoAutoplayController.stopAllVideos();
+      } else {
+        document.querySelectorAll('video').forEach(v => {
+          try {
+            if (!v.paused) v.pause();
+            v.currentTime = 0;
+          } catch(e) {}
+        });
+      }
 
       // 1. Reset incoming section scroll position
       nextEl.scrollTop = 0;
@@ -7533,10 +7855,26 @@ And last me hatttttt pgllllllll🤪💖🧿..
         nextEl.classList.add('story-active');
         nextEl.scrollTop = 0;
         isTransitioning = false;
+
+        if (nextId === 'section-more-reasons') {
+          const smilesVideo = document.getElementById('smiles-video');
+          if (typeof VideoAutoplayController !== 'undefined' && smilesVideo && smilesVideo.paused) {
+            VideoAutoplayController.playLookVideo(smilesVideo);
+          }
+        } else if (nextId === 'section-letter') {
+          const sheet = document.getElementById('stationery-letter-sheet');
+          const p10Video = document.getElementById('photo10-video');
+          if (typeof VideoAutoplayController !== 'undefined' && p10Video && sheet && sheet.classList.contains('visible') && p10Video.paused) {
+            VideoAutoplayController.playLookVideo(p10Video);
+          }
+        }
       }, 560);
     }
 
     function resetSurprise() {
+      if (typeof VideoAutoplayController !== 'undefined') {
+        VideoAutoplayController.stopAllVideos();
+      }
       goToSection(0, 'back');
 
       setTimeout(() => {
